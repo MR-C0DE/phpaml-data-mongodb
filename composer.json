@@ -1,0 +1,36 @@
+{
+  "name": "phpaml/data-mongodb",
+  "description": "MongoDB adapter for phpaml/data.",
+  "type": "library",
+  "license": "MIT",
+  "keywords": ["phpaml", "mongodb", "database", "nosql", "odm"],
+  "homepage": "https://phpaml.com",
+  "support": {
+    "issues": "https://github.com/MR-C0DE/phpaml-data-mongodb/issues",
+    "source": "https://github.com/MR-C0DE/phpaml-data-mongodb"
+  },
+  "require": {
+    "php": "^8.2",
+    "ext-mongodb": "*",
+    "phpaml/data": "^0.1@alpha",
+    "mongodb/mongodb": "^2.0"
+  },
+  "require-dev": {
+    "phpstan/phpstan": "^2.0"
+  },
+  "autoload": {
+    "psr-4": {
+      "AML\\Data\\MongoDB\\": "src/"
+    }
+  },
+  "scripts": {
+    "test": "php tests/run.php"
+  },
+  "extra": {
+    "phpaml": {
+      "type": "data-adapter",
+      "driver": "mongodb",
+      "version": "0.1.0-alpha.1"
+    }
+  }
+}
