@@ -2,7 +2,7 @@
 
 Adaptateur MongoDB indépendant pour `phpaml/data`.
 
-> État : `0.1.0-alpha.1`. Le transport mémoire et le transport officiel sont validés, notamment contre MongoDB 8.2 en replica set.
+> État : `0.1.0-alpha.2`. Le transport mémoire et le transport officiel sont validés, notamment contre MongoDB 8.2 en replica set.
 
 ```bash
 composer require phpaml/data-mongodb:^0.1@alpha

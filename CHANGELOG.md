@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.1.0-alpha.2 — 2026-08-17
+
+- correction du chemin d'analyse statique pour une installation autonome;
+- validation CI sur PHP 8.2, 8.3 et 8.4.
+
 ## 0.1.0-alpha.1 — 2026-08-17
 
 - adaptateur découvrable par `ConnectionManager`;

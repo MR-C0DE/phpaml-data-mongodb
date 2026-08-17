@@ -3,5 +3,5 @@ parameters:
     paths:
         - src
     scanDirectories:
-        - ../phpaml-data/src
+        - vendor/phpaml/data/src
     tmpDir: ../../storage/cache/phpstan-data-mongodb
