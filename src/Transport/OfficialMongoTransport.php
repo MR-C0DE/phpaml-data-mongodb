@@ -48,7 +48,7 @@ final class OfficialMongoTransport implements MongoTransport
     {
         $result = $this->invoke($this->collection($database, $collection), 'insertOne', [$document, $this->sessionOptions()]);
         if (!is_object($result)) throw new RuntimeException('Résultat insertOne invalide.');
-        return $this->invoke($result, 'getInsertedId');
+        return $this->normalizeValue($this->invoke($result, 'getInsertedId'));
     }
 
     /**
@@ -73,11 +73,24 @@ final class OfficialMongoTransport implements MongoTransport
 
     public function transaction(callable $operation): mixed
     {
+        if ($this->session !== null) {
+            throw new RuntimeException('Les transactions MongoDB imbriquées ne sont pas prises en charge.');
+        }
         $session = $this->invoke($this->client, 'startSession');
         if (!is_object($session)) throw new RuntimeException('Session MongoDB invalide.');
-        $this->session = $session; $this->invoke($session, 'startTransaction');
-        try { $result = $operation(); $this->invoke($session, 'commitTransaction'); return $result; }
-        catch (Throwable $error) { $this->invoke($session, 'abortTransaction'); throw $error; }
+        $this->session = $session;
+        $started = false;
+        try {
+            $this->invoke($session, 'startTransaction');
+            $started = true;
+            $result = $operation();
+            $this->invoke($session, 'commitTransaction');
+            return $result;
+        }
+        catch (Throwable $error) {
+            if ($started) $this->invoke($session, 'abortTransaction');
+            throw $error;
+        }
         finally { $this->session = null; }
     }
 
@@ -86,9 +99,12 @@ final class OfficialMongoTransport implements MongoTransport
         try {
             $admin = $this->invoke($this->client, 'selectDatabase', ['admin']);
             if (!is_object($admin)) throw new RuntimeException('Base admin MongoDB invalide.');
-            $result = $this->invoke($admin, 'command', [['ping' => 1]]);
-            if (is_object($result) && method_exists($result, 'toArray')) $this->invoke($result, 'toArray');
-            return ['connected' => true, 'transactions' => true, 'driver' => 'mongodb'];
+            $ping = $this->commandDocument($admin, ['ping' => 1]);
+            if (($ping['ok'] ?? 0) != 1) throw new RuntimeException('Le ping MongoDB a échoué.');
+            $hello = $this->commandDocument($admin, ['hello' => 1]);
+            $transactions = (isset($hello['setName']) && is_string($hello['setName']) && $hello['setName'] !== '')
+                || (($hello['msg'] ?? null) === 'isdbgrid');
+            return ['connected' => true, 'transactions' => $transactions, 'driver' => 'mongodb'];
         } catch (Throwable $error) {
             return ['connected' => false, 'transactions' => false, 'driver' => 'mongodb', 'error' => $error->getMessage()];
         }
@@ -99,6 +115,18 @@ final class OfficialMongoTransport implements MongoTransport
         $value = $this->invoke($this->client, 'selectCollection', [$database, $collection]);
         if (!is_object($value)) throw new RuntimeException('Collection MongoDB invalide.');
         return $value;
+    }
+    /**
+     * @param array<string, mixed> $command
+     * @return array<string, mixed>
+     */
+    private function commandDocument(object $database, array $command): array
+    {
+        $result = $this->invoke($database, 'command', [$command]);
+        if (!is_object($result) || !method_exists($result, 'toArray')) throw new RuntimeException('Réponse de commande MongoDB invalide.');
+        $rows = $this->invoke($result, 'toArray');
+        if (!is_array($rows) || !isset($rows[0])) throw new RuntimeException('Réponse de commande MongoDB vide.');
+        return $this->document($rows[0]);
     }
 
     /** @return array<string, object> */ private function sessionOptions(): array { return $this->session === null ? [] : ['session' => $this->session]; }
@@ -120,8 +148,16 @@ final class OfficialMongoTransport implements MongoTransport
         $document = [];
         foreach ($raw as $key => $item) {
             if (!is_string($key)) throw new RuntimeException('Clé de document MongoDB invalide.');
-            $document[$key] = $item;
+            $document[$key] = $this->normalizeValue($item);
         }
         return $document;
+    }
+
+    private function normalizeValue(mixed $value): mixed
+    {
+        if (!is_object($value) || $value::class !== 'MongoDB\\BSON\\ObjectId') return $value;
+        $normalized = $this->invoke($value, '__toString');
+        if (!is_string($normalized)) throw new RuntimeException('ObjectId MongoDB invalide.');
+        return $normalized;
     }
 }

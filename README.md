@@ -2,7 +2,7 @@
 
 Adaptateur MongoDB indépendant pour `phpaml/data`.
 
-> État : `0.1.0-alpha.2`. Le transport mémoire et le transport officiel sont validés, notamment contre MongoDB 8.2 en replica set.
+> État : `0.1.0-alpha.3`. Le transport mémoire et le transport officiel sont validés automatiquement contre MongoDB 8.0 en replica set.
 
 ```bash
 composer require phpaml/data-mongodb:^0.1@alpha
@@ -23,6 +23,22 @@ DATA_DATABASE=app
 ```
 
 Le package requiert `mongodb/mongodb` et `ext-mongodb` pour le transport officiel. Lorsqu'il est présent dans l'autoload, `ConnectionManager` découvre automatiquement `MongoDriverAdapter`.
+
+## Identifiants
+
+`#[DocumentId]` utilise le contrat `objectId` par défaut : PHPAML expose
+l’identifiant comme une chaîne dans l’entité et le convertit en
+`MongoDB\BSON\ObjectId` pour les opérations MongoDB.
+
+Pour conserver une clé textuelle — même si elle contient exactement 24
+caractères hexadécimaux — déclarez-la explicitement :
+
+```php
+#[DocumentId(type: 'string')]
+public string $id;
+```
+
+Les transactions MongoDB imbriquées sont refusées avec une exception claire.
 
 ## Documents et contexte
 
@@ -66,6 +82,15 @@ $db->users()->remove($user);
 ```
 
 Opérateurs portables disponibles : `=`, `!=`, `>`, `>=`, `<`, `<=` et `in`.
+Les filtres répétés sur le même champ sont combinés, les champs sont contrôlés
+contre les métadonnées du document, et les directions de tri ou paramètres de
+pagination invalides sont refusés. La validation d’entité de `phpaml/data`
+s’applique avant les insertions et mises à jour.
+
+Cette version alpha ne présente pas MongoDB comme l’équivalent fonctionnel de
+la couche SQL. Les relations, index déclaratifs, migrations de documents et
+pipelines d’agrégation publics restent à concevoir. Cassandra restera un
+adaptateur distinct afin de respecter son propre modèle de données.
 
 ## Transactions et diagnostic
 
