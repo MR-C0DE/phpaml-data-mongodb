@@ -16,7 +16,7 @@ final readonly class DocumentMetadata
      * @param class-string<T> $class
      * @param array<string, ReflectionProperty> $properties
      */
-    private function __construct(public string $class, public string $collection, public array $properties, public string $key) {}
+    private function __construct(public string $class, public string $collection, public array $properties, public string $key, public string $keyType) {}
 
     /**
      * @template E of Entity
@@ -30,7 +30,7 @@ final readonly class DocumentMetadata
         $attribute = $reflection->getAttributes(Collection::class)[0] ?? null;
         $collection = $attribute?->newInstance()->name ?? strtolower($reflection->getShortName()) . 's';
         self::identifier($collection);
-        $properties = []; $key = null;
+        $properties = []; $key = null; $keyType = 'objectId';
         foreach ($reflection->getProperties(ReflectionProperty::IS_PUBLIC) as $property) {
             if ($property->isStatic()) continue;
             $field = $property->getAttributes(Field::class)[0] ?? null;
@@ -38,10 +38,14 @@ final readonly class DocumentMetadata
                 ? '_id' : ($field?->newInstance()->name ?? $property->getName());
             self::identifier($name);
             $properties[$name] = $property;
-            if ($name === '_id') $key = $name;
+            if ($name === '_id') {
+                $key = $name;
+                $idAttribute = $property->getAttributes(DocumentId::class)[0] ?? null;
+                $keyType = $idAttribute?->newInstance()->type ?? 'objectId';
+            }
         }
         if ($key === null) throw new InvalidArgumentException("Le document {$class} doit exposer id, _id ou #[DocumentId].");
-        return new self($class, $collection, $properties, $key);
+        return new self($class, $collection, $properties, $key, $keyType);
     }
 
     /**

@@ -23,7 +23,7 @@ final class MemoryMongoTransport implements MongoTransport
         return array_slice($rows, $skip, $limit);
     }
     public function count(string $database, string $collection, array $filter): int { return count($this->find($database, $collection, $filter)); }
-    public function insert(string $database, string $collection, array $document): mixed { $id = $document['_id'] ?? (string) $this->nextId++; $document['_id'] = $id; $this->data[$database][$collection][] = $document; return $id; }
+    public function insert(string $database, string $collection, array $document): mixed { $id = $document['_id'] ?? str_pad(dechex($this->nextId++), 24, '0', STR_PAD_LEFT); $document['_id'] = $id; $this->data[$database][$collection][] = $document; return $id; }
     /**
      * @param array<string, mixed> $filter
      * @param array<string, mixed> $document
@@ -34,7 +34,43 @@ final class MemoryMongoTransport implements MongoTransport
     public function diagnostics(): array { return ['connected' => true, 'transactions' => true, 'driver' => 'memory-mongodb']; }
     /**
      * @param array<string, mixed> $row
-     * @param array<string, mixed> $filter
+     * @param array<array-key, mixed> $filter
      */
-    private function matches(array $row, array $filter): bool { foreach ($filter as $field => $condition) { $actual = $row[$field] ?? null; if (is_array($condition)) foreach ($condition as $operator => $expected) { $ok = match ($operator) { '$ne' => $actual !== $expected, '$gt' => $actual > $expected, '$gte' => $actual >= $expected, '$lt' => $actual < $expected, '$lte' => $actual <= $expected, '$in' => is_array($expected) && in_array($actual, $expected, true), default => false }; if (!$ok) return false; } elseif ($actual !== $condition) return false; } return true; }
+    private function matches(array $row, array $filter): bool
+    {
+        foreach ($filter as $field => $condition) {
+            if (!is_string($field)) return false;
+            if ($field === '$and') {
+                if (!is_array($condition)) return false;
+                foreach ($condition as $nested) {
+                    if (!is_array($nested) || !$this->matches($row, $nested)) return false;
+                }
+                continue;
+            }
+            $actual = $this->comparable($row[$field] ?? null);
+            if (!is_array($condition)) $condition = $this->comparable($condition);
+            if (is_array($condition)) {
+                foreach ($condition as $operator => $expected) {
+                    $expected = is_array($expected)
+                        ? array_map($this->comparable(...), $expected)
+                        : $this->comparable($expected);
+                    $ok = match ($operator) {
+                        '$eq' => $actual === $expected, '$ne' => $actual !== $expected,
+                        '$gt' => $actual > $expected, '$gte' => $actual >= $expected,
+                        '$lt' => $actual < $expected, '$lte' => $actual <= $expected,
+                        '$in' => is_array($expected) && in_array($actual, $expected, true),
+                        default => false,
+                    };
+                    if (!$ok) return false;
+                }
+            } elseif ($actual !== $condition) return false;
+        }
+        return true;
+    }
+
+    private function comparable(mixed $value): mixed
+    {
+        if (!is_object($value) || $value::class !== 'MongoDB\\BSON\\ObjectId') return $value;
+        return is_callable([$value, '__toString']) ? $value->__toString() : $value;
+    }
 }

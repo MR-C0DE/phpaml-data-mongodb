@@ -21,3 +21,40 @@ jobs:
       - run: composer install --no-interaction --prefer-dist
       - run: composer test
       - run: vendor/bin/phpstan analyse --no-progress --memory-limit=512M
+
+  mongodb-integration:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - php: '8.2'
+            suffix: php82
+          - php: '8.4'
+            suffix: php84
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ matrix.php }}
+          extensions: mongodb
+          coverage: none
+      - run: composer install --no-interaction --prefer-dist
+      - name: Start MongoDB replica set
+        run: |
+          docker run --detach --name phpaml-mongodb --publish 27017:27017 mongo:8.0 --replSet rs0 --bind_ip_all
+          for attempt in {1..30}; do
+            if docker exec phpaml-mongodb mongosh --quiet --eval 'db.adminCommand({ping:1}).ok' | grep -q 1; then break; fi
+            sleep 2
+          done
+          docker exec phpaml-mongodb mongosh --quiet --eval 'rs.initiate({_id:"rs0",members:[{_id:0,host:"127.0.0.1:27017"}]})'
+          for attempt in {1..30}; do
+            if docker exec phpaml-mongodb mongosh --quiet --eval 'db.hello().isWritablePrimary' | grep -q true; then exit 0; fi
+            sleep 2
+          done
+          exit 1
+      - name: Run official MongoDB CRUD and transaction contract
+        env:
+          AML_DATA_MONGODB_URI: mongodb://127.0.0.1:27017/?replicaSet=rs0
+          AML_DATA_MONGODB_DATABASE: phpaml_data_ci_${{ matrix.suffix }}
+        run: php tests/server.php
