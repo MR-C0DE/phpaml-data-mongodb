@@ -146,6 +146,18 @@ $test('le diagnostic distingue serveur autonome et replica set', function () use
     $expect(($replica['transactions'] ?? false) === true, 'Un replica set doit annoncer les transactions.');
 });
 
+$test('le transport officiel normalise récursivement les collections BSON', function () use ($expect, $officialTransport): void {
+    $transport = $officialTransport(new FakeMongoClient(new FailingMongoSession()));
+    $reflection = new ReflectionClass($transport);
+    $method = $reflection->getMethod('normalizeValue');
+    $nested = new ArrayIterator([new ArrayIterator(['quality' => 'good']), ['tip' => 'Develop']]);
+    $normalized = $method->invoke($transport, $nested);
+    $expect(
+        is_array($normalized) && is_array($normalized[0]) && $normalized[0]['quality'] === 'good',
+        'Les tableaux et documents BSON imbriqués doivent devenir des tableaux PHP.',
+    );
+});
+
 $test("l'adaptateur MongoDB s'enregistre dans ConnectionManager", function () use ($expect): void {
     $manager = new ConnectionManager('/tmp', ['default' => 'documents', 'connections' => ['documents' => ['driver' => 'mongodb', 'database' => 'app']]]);
     $manager->register('mongodb', new class implements DriverAdapter {

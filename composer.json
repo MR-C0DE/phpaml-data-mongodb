@@ -12,7 +12,7 @@
   "require": {
     "php": "^8.2",
     "ext-mongodb": "*",
-    "phpaml/data": "^0.1@alpha",
+    "phpaml/data": "^0.1@alpha || ^0.2@alpha",
     "mongodb/mongodb": "^2.0"
   },
   "require-dev": {
@@ -30,7 +30,7 @@
     "phpaml": {
       "type": "data-adapter",
       "driver": "mongodb",
-      "version": "0.1.0-alpha.3"
+      "version": "0.1.0-alpha.4"
     }
   }
 }

@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.1.0-alpha.4 — 2026-08-21
+
+- déclare la compatibilité avec la configuration déclarative de PHPAML Data
+  0.2 ;
+- conserve les identifiants ObjectId, transactions et diagnostics validés par
+  la suite MongoDB.
+
 ## 0.1.0-alpha.3 — 2026-08-17
 
 - contrat explicite des identifiants `objectId` et `string` ;
