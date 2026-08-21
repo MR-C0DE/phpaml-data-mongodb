@@ -155,9 +155,15 @@ final class OfficialMongoTransport implements MongoTransport
 
     private function normalizeValue(mixed $value): mixed
     {
-        if (!is_object($value) || $value::class !== 'MongoDB\\BSON\\ObjectId') return $value;
-        $normalized = $this->invoke($value, '__toString');
-        if (!is_string($normalized)) throw new RuntimeException('ObjectId MongoDB invalide.');
+        if (is_object($value) && $value::class === 'MongoDB\\BSON\\ObjectId') {
+            $normalized = $this->invoke($value, '__toString');
+            if (!is_string($normalized)) throw new RuntimeException('ObjectId MongoDB invalide.');
+            return $normalized;
+        }
+        if ($value instanceof \Traversable) $value = iterator_to_array($value);
+        if (!is_array($value)) return $value;
+        $normalized = [];
+        foreach ($value as $key => $item) $normalized[$key] = $this->normalizeValue($item);
         return $normalized;
     }
 }
