@@ -1,46 +1,45 @@
-# phpaml/data-mongodb
+# PHPAML Data MongoDB
 
-Adaptateur MongoDB indépendant pour `phpaml/data`.
+The official MongoDB adapter for PHPAML Data.
 
-> État : `0.1.0-alpha.4`. Le transport mémoire et le transport officiel sont validés automatiquement contre MongoDB 8.2 en replica set.
+> Status: `0.1.0-alpha.4`. The in-memory and official transports are tested
+> against MongoDB 8.2 running as a replica set.
 
-```bash
-composer require phpaml/data-mongodb:^0.1@alpha
-```
+[Documentation française](README.fr.md) · [PHPAML Data](https://github.com/MR-C0DE/phpaml-data) ·
+[Changelog](CHANGELOG.md)
 
-## Installation PHPAML
+## Why this adapter?
+
+PHPAML Data MongoDB brings typed PHPAML entities and a familiar query workflow
+to MongoDB while preserving MongoDB-specific behavior. It does not pretend that
+a document database is relational SQL.
+
+- typed documents and collections;
+- CRUD, filters, ordering, and pagination;
+- explicit `objectId` and string identifier contracts;
+- entity validation inherited from PHPAML Data;
+- transactions through MongoDB sessions;
+- automatic discovery by PHPAML's `ConnectionManager`;
+- deterministic in-memory transport for tests;
+- topology-aware diagnostics.
+
+## Install
+
+In a PHPAML project:
 
 ```bash
 aml install data --driver mongodb
 ```
 
-Configuration :
+In any Composer project:
 
-```dotenv
-DATA_DRIVER=mongodb
-DATA_URI=mongodb://127.0.0.1:27017
-DATA_DATABASE=app
+```bash
+composer require phpaml/data-mongodb:^0.1@alpha
 ```
 
-Le package requiert `mongodb/mongodb` et `ext-mongodb` pour le transport officiel. Lorsqu'il est présent dans l'autoload, `ConnectionManager` découvre automatiquement `MongoDriverAdapter`.
+The official transport requires `ext-mongodb` and `mongodb/mongodb`.
 
-## Identifiants
-
-`#[DocumentId]` utilise le contrat `objectId` par défaut : PHPAML expose
-l’identifiant comme une chaîne dans l’entité et le convertit en
-`MongoDB\BSON\ObjectId` pour les opérations MongoDB.
-
-Pour conserver une clé textuelle — même si elle contient exactement 24
-caractères hexadécimaux — déclarez-la explicitement :
-
-```php
-#[DocumentId(type: 'string')]
-public string $id;
-```
-
-Les transactions MongoDB imbriquées sont refusées avec une exception claire.
-
-## Documents et contexte
+## Five-minute example
 
 ```php
 use AML\Data\Entity;
@@ -65,51 +64,58 @@ final class AppMongoContext extends MongoContext
         return $this->set(User::class);
     }
 }
-```
 
-## Requêtes
-
-```php
 $page = $db->users()
     ->where('age', '>=', 18)
     ->orderBy('name')
-    ->paginate(1, 20);
-
-$user = $db->users()->find($id);
-$db->users()->add($user);
-$db->users()->update($user);
-$db->users()->remove($user);
+    ->paginate(page: 1, perPage: 20);
 ```
 
-Opérateurs portables disponibles : `=`, `!=`, `>`, `>=`, `<`, `<=` et `in`.
-Les filtres répétés sur le même champ sont combinés, les champs sont contrôlés
-contre les métadonnées du document, et les directions de tri ou paramètres de
-pagination invalides sont refusés. La validation d’entité de `phpaml/data`
-s’applique avant les insertions et mises à jour.
+Supported portable operators are `=`, `!=`, `>`, `>=`, `<`, `<=`, and `in`.
 
-Cette version alpha ne présente pas MongoDB comme l’équivalent fonctionnel de
-la couche SQL. Les relations, index déclaratifs, migrations de documents et
-pipelines d’agrégation publics restent à concevoir. Cassandra restera un
-adaptateur distinct afin de respecter son propre modèle de données.
+## Identifier contracts
 
-## Transactions et diagnostic
+`#[DocumentId]` uses MongoDB `ObjectId` by default. PHPAML exposes it as a
+string in the entity and converts it for database operations. Use an explicit
+string contract when the identifier must remain textual:
 
 ```php
-$db->transaction(function (AppMongoContext $db): void {
-    // Les opérations partagent une session MongoDB.
-});
+#[DocumentId(type: 'string')]
+public string $id;
 ```
 
-Les transactions du serveur exigent une topologie MongoDB compatible, généralement un replica set. Le transport mémoire fournit un rollback déterministe pour les tests.
+## Platform relationship
 
-```bash
-aml data:doctor
+```text
+PHPAML Data
+  └─ defines shared entities, validation, and connection discovery
+       └─ PHPAML Data MongoDB
+            ├─ MongoContext and MongoSet
+            ├─ official MongoDB transport
+            └─ in-memory test transport
 ```
 
-## Tests serveur
+The adapter is discovered automatically when it is present in Composer's
+autoload. Use `aml data:doctor` to inspect the configured server and transaction
+capabilities.
+
+## Current scope
+
+This alpha intentionally does not claim SQL feature parity. Public document
+relations, declarative indexes, document migrations, and aggregation pipelines
+remain future work. Server transactions require a compatible MongoDB topology,
+normally a replica set.
+
+## Tests
 
 ```bash
+composer test
+
 AML_DATA_MONGODB_URI='mongodb://127.0.0.1:27017' \
 AML_DATA_MONGODB_DATABASE='phpaml_data_test' \
 php tests/server.php
 ```
+
+## License
+
+PHPAML Data MongoDB is open-source software licensed under the [MIT License](LICENSE).
