@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.1.0-alpha.5 — 2026-08-26
+
+- documente la commande Composer complète qui autorise explicitement les
+  versions alpha de Data et de son adaptateur MongoDB dans le projet racine.
+
 ## 0.1.0-alpha.4 — 2026-08-21
 
 - déclare la compatibilité avec la configuration déclarative de PHPAML Data

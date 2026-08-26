@@ -2,7 +2,7 @@
 
 The official MongoDB adapter for PHPAML Data.
 
-> Status: `0.1.0-alpha.4`. The in-memory and official transports are tested
+> Status: `0.1.0-alpha.5`. The in-memory and official transports are tested
 > against MongoDB 8.2 running as a replica set.
 
 [Documentation française](README.fr.md) · [PHPAML Data](https://github.com/MR-C0DE/phpaml-data) ·
@@ -34,7 +34,7 @@ aml install data --driver mongodb
 In any Composer project:
 
 ```bash
-composer require phpaml/data-mongodb:^0.1@alpha
+composer require phpaml/data:^0.2@alpha phpaml/data-mongodb:^0.1@alpha
 ```
 
 The official transport requires `ext-mongodb` and `mongodb/mongodb`.
