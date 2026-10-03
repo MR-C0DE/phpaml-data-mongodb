@@ -49,6 +49,14 @@ final class FakeMongoCursor
     public function toArray(): array { return $this->rows; }
 }
 
+final class FakeBsonArray
+{
+    /** @param array<mixed> $values */
+    public function __construct(private array $values) {}
+    /** @return array<mixed> */
+    public function getArrayCopy(): array { return $this->values; }
+}
+
 final class FakeMongoDatabase
 {
     public function __construct(private bool $replicaSet) {}
@@ -150,7 +158,7 @@ $test('le transport officiel normalise récursivement les collections BSON', fun
     $transport = $officialTransport(new FakeMongoClient(new FailingMongoSession()));
     $reflection = new ReflectionClass($transport);
     $method = $reflection->getMethod('normalizeValue');
-    $nested = new ArrayIterator([new ArrayIterator(['quality' => 'good']), ['tip' => 'Develop']]);
+    $nested = new FakeBsonArray([new FakeBsonArray(['quality' => 'good']), ['tip' => 'Develop']]);
     $normalized = $method->invoke($transport, $nested);
     $expect(
         is_array($normalized) && is_array($normalized[0]) && $normalized[0]['quality'] === 'good',

@@ -160,6 +160,10 @@ final class OfficialMongoTransport implements MongoTransport
             if (!is_string($normalized)) throw new RuntimeException('ObjectId MongoDB invalide.');
             return $normalized;
         }
+        if (is_object($value) && is_callable([$value, 'getArrayCopy'])) {
+            $copy = $this->invoke($value, 'getArrayCopy');
+            if (is_array($copy)) $value = $copy;
+        }
         if ($value instanceof \Traversable) $value = iterator_to_array($value);
         if (!is_array($value)) return $value;
         $normalized = [];
